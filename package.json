@@ -1,0 +1,29 @@
+{
+  "name": "iagood",
+  "version": "1.0.0",
+  "main": "generate-seed.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:create": "createdb iagood || echo 'Database may already exist'",
+    "db:schema": "psql iagood < db/schema.sql",
+    "db:init-wallets": "tsx db/init-wallets.ts",
+    "db:setup": "npm run db:create && npm run db:schema && npm run db:init-wallets",
+    "db:reset": "dropdb iagood --if-exists && npm run db:setup",
+    "webhook": "tsx v3/api/webhook.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@solana/web3.js": "^1.98.4",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.6.2",
+    "@types/pg": "^8.15.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "pg": "^8.16.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
