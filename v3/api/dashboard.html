@@ -253,6 +253,19 @@
         let currentView = 'holistic';
         let charts = {};
 
+        // Helper function to get wallet address by name
+        function getWalletAddress(walletName) {
+            if (!dashboardData) return null;
+            const wallet = dashboardData.wallet_performance.find(w => w.wallet_name === walletName);
+            return wallet ? wallet.wallet_address : null;
+        }
+
+        // Helper function to create Solscan link
+        function getSolscanLink(address, text) {
+            if (!address) return text;
+            return `<a href="https://solscan.io/account/${address}" target="_blank" style="color: #00d4ff; text-decoration: none;">${text} 🔗</a>`;
+        }
+
         // Fetch data from APIs
         async function fetchData() {
             try {
@@ -387,7 +400,7 @@
                         <tbody>
                             ${wallet_performance.map(w => `
                                 <tr>
-                                    <td><strong>${w.wallet_name}</strong></td>
+                                    <td><strong>${getSolscanLink(w.wallet_address, w.wallet_name)}</strong></td>
                                     <td>${w.verified_trades}/${w.total_trades}</td>
                                     <td>${w.success_rate.toFixed(1)}%</td>
                                     <td class="${w.total_realized_pnl >= 0 ? 'positive' : 'negative'}">
@@ -416,9 +429,11 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                ${positions.map(p => `
+                                ${positions.map(p => {
+                                    const address = getWalletAddress(p.wallet_name);
+                                    return `
                                     <tr>
-                                        <td><strong>${p.wallet_name}</strong></td>
+                                        <td><strong>${getSolscanLink(address, p.wallet_name)}</strong></td>
                                         <td>${p.token}</td>
                                         <td>${p.current_amount.toFixed(4)}</td>
                                         <td>$${p.avg_entry_price.toFixed(4)}</td>
@@ -427,7 +442,7 @@
                                             $${(p.unrealized_pnl || 0).toFixed(2)}
                                         </td>
                                     </tr>
-                                `).join('')}
+                                `}).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -456,6 +471,15 @@
             }
 
             const html = `
+                <div style="margin-bottom: 20px; padding: 15px; background: #1e1e3f; border: 2px solid #2a2a5f; border-radius: 8px;">
+                    <div style="color: #888; font-size: 0.9rem; margin-bottom: 5px;">Wallet Address</div>
+                    <div style="font-family: monospace; font-size: 1.1rem;">
+                        <a href="https://solscan.io/account/${wallet.wallet_address}" target="_blank" style="color: #00d4ff; text-decoration: none;">
+                            ${wallet.wallet_address} 🔗
+                        </a>
+                    </div>
+                </div>
+
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <div class="metric-label">Realized P&L</div>

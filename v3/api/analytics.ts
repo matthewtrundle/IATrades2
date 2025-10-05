@@ -64,6 +64,7 @@ interface Flag {
 
 interface WalletStats {
   wallet_name: string;
+  wallet_address: string;
   timeframe: string | null;
   total_trades: number;
   verified_trades: number;
@@ -514,6 +515,7 @@ async function fetchWalletPerformance(): Promise<WalletStats[]> {
       SELECT
         w.id,
         w.name,
+        w.address,
         w.timeframe,
         COUNT(t.id) as total_trades,
         COUNT(t.id) FILTER (WHERE t.status = 'verified') as verified_trades,
@@ -521,7 +523,7 @@ async function fetchWalletPerformance(): Promise<WalletStats[]> {
         MAX(t.actual_slippage_pct) FILTER (WHERE t.actual_slippage_pct IS NOT NULL) as max_slippage
       FROM wallets w
       LEFT JOIN trades t ON w.id = t.wallet_id
-      GROUP BY w.id, w.name, w.timeframe
+      GROUP BY w.id, w.name, w.address, w.timeframe
     ),
     wallet_positions AS (
       SELECT
@@ -534,6 +536,7 @@ async function fetchWalletPerformance(): Promise<WalletStats[]> {
     )
     SELECT
       wt.name as wallet_name,
+      wt.address as wallet_address,
       wt.timeframe,
       wt.total_trades,
       wt.verified_trades,
@@ -553,6 +556,7 @@ async function fetchWalletPerformance(): Promise<WalletStats[]> {
 
   return result.rows.map((row) => ({
     wallet_name: row.wallet_name,
+    wallet_address: row.wallet_address,
     timeframe: row.timeframe,
     total_trades: parseInt(row.total_trades) || 0,
     verified_trades: parseInt(row.verified_trades) || 0,
