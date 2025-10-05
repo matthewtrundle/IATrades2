@@ -142,6 +142,63 @@ router.get('/health', async (req: Request, res: Response) => {
 });
 
 /**
+ * Fees and slippage cost endpoint
+ * GET /analytics/fees
+ *
+ * Returns detailed breakdown of fees and slippage costs per wallet
+ */
+router.get('/fees', async (req: Request, res: Response) => {
+  try {
+    const result = await query(`
+      SELECT
+        w.name as wallet_name,
+        COUNT(t.id) FILTER (WHERE t.status = 'verified') as verified_trades,
+        COALESCE(SUM(
+          (COALESCE(t.jupiter_fee_lamports, 0) +
+           COALESCE(t.network_fee_lamports, 0) +
+           COALESCE(t.priority_fee_lamports, 0)) / 1e9
+        ) FILTER (WHERE t.status = 'verified'), 0) as total_fees_sol,
+        COALESCE(SUM(
+          CASE
+            WHEN t.actual_slippage_pct IS NOT NULL AND t.input_amount IS NOT NULL
+            THEN ABS(t.actual_slippage_pct / 100.0 * t.input_amount)
+            ELSE 0
+          END
+        ) FILTER (WHERE t.status = 'verified'), 0) as total_slippage_cost
+      FROM wallets w
+      LEFT JOIN trades t ON w.id = t.wallet_id
+      GROUP BY w.id, w.name
+      ORDER BY w.name
+    `);
+
+    const walletFees = result.rows.map((row) => ({
+      wallet_name: row.wallet_name,
+      verified_trades: parseInt(row.verified_trades) || 0,
+      total_fees_sol: parseFloat(row.total_fees_sol) || 0,
+      total_slippage_cost: parseFloat(row.total_slippage_cost) || 0,
+    }));
+
+    // Calculate totals
+    const totals = {
+      total_fees_sol: walletFees.reduce((sum, w) => sum + w.total_fees_sol, 0),
+      total_slippage_cost: walletFees.reduce((sum, w) => sum + w.total_slippage_cost, 0),
+      total_verified_trades: walletFees.reduce((sum, w) => sum + w.verified_trades, 0),
+    };
+
+    res.json({
+      totals,
+      by_wallet: walletFees,
+    });
+  } catch (error) {
+    console.error('[ANALYTICS] Error fetching fees:', error);
+    res.status(500).json({
+      error: 'Failed to fetch fees data',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
  * Main analytics endpoint
  * GET /analytics
  *

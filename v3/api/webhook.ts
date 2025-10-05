@@ -83,6 +83,11 @@ app.use(express.json());
 // Mount analytics router
 app.use('/analytics', analyticsRouter);
 
+// Dashboard endpoint
+app.get('/dashboard', (req: Request, res: Response) => {
+  res.sendFile('dashboard.html', { root: __dirname });
+});
+
 // Health check endpoint
 app.get('/health', async (req: Request, res: Response) => {
   try {
@@ -716,7 +721,8 @@ app.listen(PORT, () => {
   console.log(`[WEBHOOK] Server listening on port ${PORT}`);
   console.log(`[WEBHOOK] Health check: http://localhost:${PORT}/health`);
   console.log(`[WEBHOOK] Webhook endpoint: http://localhost:${PORT}/webhook`);
-  console.log(`[WEBHOOK] Analytics dashboard: http://localhost:${PORT}/analytics`);
-  console.log(`[WEBHOOK] Analytics health: http://localhost:${PORT}/analytics/health`);
+  console.log(`[WEBHOOK] Dashboard: http://localhost:${PORT}/dashboard`);
+  console.log(`[WEBHOOK] Analytics API: http://localhost:${PORT}/analytics`);
+  console.log(`[WEBHOOK] Analytics fees: http://localhost:${PORT}/analytics/fees`);
   console.log(`[WEBHOOK] Ready to receive TradingView alerts`);
 });

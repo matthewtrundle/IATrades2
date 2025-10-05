@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IAGood Trading Bot - Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0f0f23;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #1e1e3f;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #00d4ff;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .last-updated {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: #1e1e3f;
+            border: 2px solid #2a2a5f;
+            border-radius: 8px;
+            color: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .tab:hover {
+            background: #2a2a5f;
+            border-color: #00d4ff;
+        }
+
+        .tab.active {
+            background: #00d4ff;
+            color: #0f0f23;
+            border-color: #00d4ff;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: #1e1e3f;
+            border: 2px solid #2a2a5f;
+            border-radius: 12px;
+            padding: 20px;
+            transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: #00d4ff;
+        }
+
+        .metric-label {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .metric-value.positive {
+            color: #00ff88;
+        }
+
+        .metric-value.negative {
+            color: #ff4444;
+        }
+
+        .metric-subtext {
+            color: #666;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: #1e1e3f;
+            border: 2px solid #2a2a5f;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .chart-title {
+            color: #00d4ff;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .table-card {
+            background: #1e1e3f;
+            border: 2px solid #2a2a5f;
+            border-radius: 12px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            color: #00d4ff;
+            border-bottom: 2px solid #2a2a5f;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #2a2a5f;
+        }
+
+        tr:hover {
+            background: #252545;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-verified {
+            background: #00ff88;
+            color: #0f0f23;
+        }
+
+        .status-failed {
+            background: #ff4444;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .error {
+            background: #ff4444;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 IAGood Trading Bot</h1>
+            <p class="last-updated">Last updated: <span id="lastUpdated">Loading...</span></p>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchView('holistic')">📊 Holistic View</div>
+            <div class="tab" onclick="switchView('SOL_30M')">⏱️ SOL 30M</div>
+            <div class="tab" onclick="switchView('SOL_60M')">⏱️ SOL 60M</div>
+            <div class="tab" onclick="switchView('SOL_240M')">⏱️ SOL 240M</div>
+            <div class="tab" onclick="switchView('FARTCOIN')">💎 FARTCOIN</div>
+            <div class="tab" onclick="switchView('FARTBOY')">💎 FARTBOY</div>
+            <div class="tab" onclick="switchView('USELESS')">💎 USELESS</div>
+        </div>
+
+        <div id="content">
+            <div class="loading">Loading dashboard data...</div>
+        </div>
+    </div>
+
+    <script>
+        let dashboardData = null;
+        let feesData = null;
+        let currentView = 'holistic';
+        let charts = {};
+
+        // Fetch data from APIs
+        async function fetchData() {
+            try {
+                const [analyticsRes, feesRes] = await Promise.all([
+                    fetch('/analytics'),
+                    fetch('/analytics/fees')
+                ]);
+
+                if (!analyticsRes.ok || !feesRes.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+
+                dashboardData = await analyticsRes.json();
+                feesData = await feesRes.json();
+
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+                renderView();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('content').innerHTML = `
+                    <div class="error">
+                        ❌ Failed to load dashboard data: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Switch between views
+        function switchView(view) {
+            currentView = view;
+
+            // Update tab styling
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            renderView();
+        }
+
+        // Render current view
+        function renderView() {
+            if (!dashboardData || !feesData) return;
+
+            if (currentView === 'holistic') {
+                renderHolisticView();
+            } else {
+                renderWalletView(currentView);
+            }
+        }
+
+        // Render holistic view
+        function renderHolisticView() {
+            const { summary, wallet_performance, slippage_distribution, positions } = dashboardData;
+            const { totals } = feesData;
+
+            const totalPnL = (summary.total_realized_pnl || 0) + (summary.total_unrealized_pnl || 0);
+
+            const html = `
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Total P&L</div>
+                        <div class="metric-value ${totalPnL >= 0 ? 'positive' : 'negative'}">
+                            $${totalPnL.toFixed(2)}
+                        </div>
+                        <div class="metric-subtext">
+                            Realized: $${(summary.total_realized_pnl || 0).toFixed(2)} |
+                            Unrealized: $${(summary.total_unrealized_pnl || 0).toFixed(2)}
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Total Fees Paid</div>
+                        <div class="metric-value">${totals.total_fees_sol.toFixed(4)} SOL</div>
+                        <div class="metric-subtext">${totals.total_verified_trades} verified trades</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Slippage Cost</div>
+                        <div class="metric-value">$${totals.total_slippage_cost.toFixed(2)}</div>
+                        <div class="metric-subtext">Avg: ${(summary.avg_slippage_pct || 0).toFixed(2)}%</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Success Rate</div>
+                        <div class="metric-value">${summary.success_rate.toFixed(1)}%</div>
+                        <div class="metric-subtext">${summary.verified_trades}/${summary.total_trades} trades</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Active Positions</div>
+                        <div class="metric-value">${summary.total_open_positions}</div>
+                        <div class="metric-subtext">Value: $${summary.total_open_value.toFixed(2)}</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Max Slippage</div>
+                        <div class="metric-value">${(summary.max_slippage_pct || 0).toFixed(2)}%</div>
+                        <div class="metric-subtext">${summary.high_slippage_trades} trades >5%</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">Wallet Performance (P&L)</div>
+                        <div class="chart-container">
+                            <canvas id="walletPnLChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-title">Slippage Distribution</div>
+                        <div class="chart-container">
+                            <canvas id="slippageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="chart-title">Wallet Breakdown</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Wallet</th>
+                                <th>Trades</th>
+                                <th>Success Rate</th>
+                                <th>P&L</th>
+                                <th>Avg Slippage</th>
+                                <th>Positions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${wallet_performance.map(w => `
+                                <tr>
+                                    <td><strong>${w.wallet_name}</strong></td>
+                                    <td>${w.verified_trades}/${w.total_trades}</td>
+                                    <td>${w.success_rate.toFixed(1)}%</td>
+                                    <td class="${w.total_realized_pnl >= 0 ? 'positive' : 'negative'}">
+                                        $${w.total_realized_pnl.toFixed(2)}
+                                    </td>
+                                    <td>${w.avg_slippage_pct ? w.avg_slippage_pct.toFixed(2) + '%' : 'N/A'}</td>
+                                    <td>${w.open_positions}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                ${positions.length > 0 ? `
+                    <div class="table-card" style="margin-top: 20px;">
+                        <div class="chart-title">Active Positions</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Wallet</th>
+                                    <th>Token</th>
+                                    <th>Amount</th>
+                                    <th>Entry Price</th>
+                                    <th>Current Price</th>
+                                    <th>Unrealized P&L</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${positions.map(p => `
+                                    <tr>
+                                        <td><strong>${p.wallet_name}</strong></td>
+                                        <td>${p.token}</td>
+                                        <td>${p.current_amount.toFixed(4)}</td>
+                                        <td>$${p.avg_entry_price.toFixed(4)}</td>
+                                        <td>${p.current_price ? '$' + p.current_price.toFixed(4) : 'N/A'}</td>
+                                        <td class="${(p.unrealized_pnl || 0) >= 0 ? 'positive' : 'negative'}">
+                                            $${(p.unrealized_pnl || 0).toFixed(2)}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : ''}
+            `;
+
+            document.getElementById('content').innerHTML = html;
+
+            // Render charts
+            setTimeout(() => {
+                renderWalletPnLChart(wallet_performance);
+                renderSlippageChart(slippage_distribution);
+            }, 100);
+        }
+
+        // Render wallet-specific view
+        function renderWalletView(walletName) {
+            const wallet = dashboardData.wallet_performance.find(w => w.wallet_name === walletName);
+            const walletFees = feesData.by_wallet.find(w => w.wallet_name === walletName);
+            const walletPositions = dashboardData.positions.filter(p => p.wallet_name === walletName);
+            const walletTrades = dashboardData.recent_trades.filter(t => t.wallet_name === walletName);
+
+            if (!wallet) {
+                document.getElementById('content').innerHTML = '<div class="error">Wallet data not found</div>';
+                return;
+            }
+
+            const html = `
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Realized P&L</div>
+                        <div class="metric-value ${wallet.total_realized_pnl >= 0 ? 'positive' : 'negative'}">
+                            $${wallet.total_realized_pnl.toFixed(2)}
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Fees Paid</div>
+                        <div class="metric-value">${walletFees ? walletFees.total_fees_sol.toFixed(4) : '0.0000'} SOL</div>
+                        <div class="metric-subtext">${walletFees ? walletFees.verified_trades : 0} trades</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Slippage Cost</div>
+                        <div class="metric-value">$${walletFees ? walletFees.total_slippage_cost.toFixed(2) : '0.00'}</div>
+                        <div class="metric-subtext">Avg: ${wallet.avg_slippage_pct ? wallet.avg_slippage_pct.toFixed(2) + '%' : 'N/A'}</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Success Rate</div>
+                        <div class="metric-value">${wallet.success_rate.toFixed(1)}%</div>
+                        <div class="metric-subtext">${wallet.verified_trades}/${wallet.total_trades} trades</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Active Positions</div>
+                        <div class="metric-value">${wallet.open_positions}</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Max Slippage</div>
+                        <div class="metric-value">${wallet.max_slippage_pct ? wallet.max_slippage_pct.toFixed(2) + '%' : 'N/A'}</div>
+                    </div>
+                </div>
+
+                ${walletPositions.length > 0 ? `
+                    <div class="table-card">
+                        <div class="chart-title">Positions</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Token</th>
+                                    <th>Status</th>
+                                    <th>Amount</th>
+                                    <th>Entry Price</th>
+                                    <th>Current Price</th>
+                                    <th>Book Value</th>
+                                    <th>Market Value</th>
+                                    <th>Unrealized P&L</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${walletPositions.map(p => `
+                                    <tr>
+                                        <td><strong>${p.token}</strong></td>
+                                        <td><span class="status-badge status-${p.status.toLowerCase()}">${p.status}</span></td>
+                                        <td>${p.current_amount.toFixed(4)}</td>
+                                        <td>$${p.avg_entry_price.toFixed(4)}</td>
+                                        <td>${p.current_price ? '$' + p.current_price.toFixed(4) : 'N/A'}</td>
+                                        <td>$${p.current_value.toFixed(2)}</td>
+                                        <td>${p.market_value ? '$' + p.market_value.toFixed(2) : 'N/A'}</td>
+                                        <td class="${(p.unrealized_pnl || 0) >= 0 ? 'positive' : 'negative'}">
+                                            $${(p.unrealized_pnl || 0).toFixed(2)}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : '<div class="table-card"><p style="color: #888;">No active positions</p></div>'}
+
+                ${walletTrades.length > 0 ? `
+                    <div class="table-card" style="margin-top: 20px;">
+                        <div class="chart-title">Recent Trades</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Action</th>
+                                    <th>Pair</th>
+                                    <th>Input</th>
+                                    <th>Output</th>
+                                    <th>Slippage</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${walletTrades.map(t => `
+                                    <tr>
+                                        <td>${new Date(t.execution_timestamp).toLocaleString()}</td>
+                                        <td><strong>${t.action}</strong></td>
+                                        <td>${t.input_token}→${t.output_token}</td>
+                                        <td>${t.input_amount.toFixed(4)}</td>
+                                        <td>${t.output_amount.toFixed(4)}</td>
+                                        <td>${t.actual_slippage_pct ? t.actual_slippage_pct.toFixed(2) + '%' : 'N/A'}</td>
+                                        <td><span class="status-badge status-${t.status}">${t.status}</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : ''}
+            `;
+
+            document.getElementById('content').innerHTML = html;
+        }
+
+        // Render wallet P&L chart
+        function renderWalletPnLChart(wallets) {
+            const ctx = document.getElementById('walletPnLChart');
+            if (!ctx) return;
+
+            if (charts.walletPnL) {
+                charts.walletPnL.destroy();
+            }
+
+            charts.walletPnL = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: wallets.map(w => w.wallet_name),
+                    datasets: [{
+                        label: 'Realized P&L ($)',
+                        data: wallets.map(w => w.total_realized_pnl),
+                        backgroundColor: wallets.map(w => w.total_realized_pnl >= 0 ? '#00ff88' : '#ff4444'),
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#2a2a5f' },
+                            ticks: { color: '#e0e0e0' }
+                        },
+                        x: {
+                            grid: { color: '#2a2a5f' },
+                            ticks: { color: '#e0e0e0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render slippage distribution chart
+        function renderSlippageChart(distribution) {
+            const ctx = document.getElementById('slippageChart');
+            if (!ctx) return;
+
+            if (charts.slippage) {
+                charts.slippage.destroy();
+            }
+
+            charts.slippage = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(distribution),
+                    datasets: [{
+                        label: 'Number of Trades',
+                        data: Object.values(distribution),
+                        backgroundColor: ['#00ff88', '#00d4ff', '#ffaa00', '#ff4444'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#2a2a5f' },
+                            ticks: { color: '#e0e0e0', stepSize: 1 }
+                        },
+                        x: {
+                            grid: { color: '#2a2a5f' },
+                            ticks: { color: '#e0e0e0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initial load and auto-refresh
+        fetchData();
+        setInterval(fetchData, 30000); // Refresh every 30 seconds
+    </script>
+</body>
+</html>
